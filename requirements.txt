@@ -6,3 +6,4 @@ PyMuPDF==2.1
 sentence-transformers==6.3.0
 chromadb==1.5.9
 python-multipart==0.0.33
+redis
