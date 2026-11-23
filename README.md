@@ -75,6 +75,25 @@ Copy-Item .env.example .env
 
 在 `.env` 中填写 `DEEPSEEK_API_KEY`。默认的 `CHROMA_DB_PATH` 指向旧项目已有的 ChromaDB，因此不会重新初始化原有 `njust_knowledge` 集合。
 
+聊天记录使用 Redis 持久化。首次运行前启动项目专用容器：
+
+```powershell
+docker run -d `
+  --name ai-learning-redis `
+  -p 6379:6379 `
+  -v ai-learning-redis-data:/data `
+  redis:7-alpine `
+  redis-server --appendonly yes
+```
+
+以后只需执行 `docker start ai-learning-redis`。可用下面的命令确认服务状态：
+
+```powershell
+docker exec ai-learning-redis redis-cli ping
+```
+
+预期返回 `PONG`。`.env` 中的 `REDIS_URL` 默认为 `redis://localhost:6379/0`，聊天记录默认保留 86400 秒。
+
 ## 启动
 
 从项目根目录执行：

@@ -44,14 +44,6 @@ def get_settings() -> Settings:
             "DEEPSEEK_BASE_URL", "https://api.deepseek.com"
         ),
         deepseek_model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
-        redis_url=os.getenv(
-    "REDIS_URL",
-    "redis://localhost:6379/0"
-),
-       chat_history_ttl=int(
-    os.getenv(
-        "CHAT_HISTORY_TTL",
-        "86400"
-    )
-),
+        redis_url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
+        chat_history_ttl=int(os.getenv("CHAT_HISTORY_TTL", "86400")),
     )

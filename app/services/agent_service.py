@@ -6,22 +6,29 @@ from typing import Any
 from openai import AsyncOpenAI
 
 from app.core.config import Settings
+from app.services.chat_history import ChatHistoryStore
 from app.services.rag_service import RAGService
 
 
 class AgentService:
-    def __init__(self, settings: Settings, rag_service: RAGService):
+    def __init__(
+        self,
+        settings: Settings,
+        rag_service: RAGService,
+        history_store: ChatHistoryStore,
+    ):
         self._settings = settings
         self._rag_service = rag_service
-        self._histories: dict[str, list[dict[str, Any]]] = {}
+        self._history_store = history_store
 
     async def chat(self, message: str, session_id: str) -> str:
         """Answer a normal question or use a tool when knowledge is needed."""
         if not message.strip():
             raise ValueError("消息不能为空")
 
+        history = await self._history_store.load(session_id)
         messages: list[dict[str, Any]] = [self._system_message()]
-        messages.extend(self._histories.get(session_id, []))
+        messages.extend(history)
         messages.append({"role": "user", "content": message})
 
         client = self._create_client()
@@ -36,7 +43,7 @@ class AgentService:
 
             if not assistant_message.tool_calls:
                 answer = assistant_message.content or "模型没有返回有效回答。"
-                self._remember(session_id, message, answer)
+                await self._remember(session_id, history, message, answer)
                 return answer
 
             messages.append(assistant_message.model_dump(exclude_none=True))
@@ -91,15 +98,19 @@ class AgentService:
             base_url=self._settings.deepseek_base_url,
         )
 
-    def _remember(self, session_id: str, question: str, answer: str) -> None:
-        history = self._histories.setdefault(session_id, [])
-        history.extend(
-            [
-                {"role": "user", "content": question},
-                {"role": "assistant", "content": answer},
-            ]
-        )
-        self._histories[session_id] = history[-20:]
+    async def _remember(
+        self,
+        session_id: str,
+        history: list[dict[str, Any]],
+        question: str,
+        answer: str,
+    ) -> None:
+        updated_history = [
+            *history,
+            {"role": "user", "content": question},
+            {"role": "assistant", "content": answer},
+        ]
+        await self._history_store.save(session_id, updated_history[-20:])
 
     @staticmethod
     def _system_message() -> dict[str, str]:
